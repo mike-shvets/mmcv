@@ -6,10 +6,12 @@ class CheckpointHook(Hook):
 
     def __init__(self,
                  interval=-1,
+                 iter_interval=-1,
                  save_optimizer=True,
                  out_dir=None,
                  **kwargs):
         self.interval = interval
+        self.iter_interval = iter_interval
         self.save_optimizer = save_optimizer
         self.out_dir = out_dir
         self.args = kwargs
@@ -23,3 +25,15 @@ class CheckpointHook(Hook):
             self.out_dir = runner.work_dir
         runner.save_checkpoint(
             self.out_dir, save_optimizer=self.save_optimizer, **self.args)
+
+    @master_only
+    def after_train_iter(self, runner):
+        if not self.every_n_iters(runner, self.iter_interval):
+            return
+
+        if not self.out_dir:
+            self.out_dir = runner.work_dir
+        runner.save_checkpoint(
+            self.out_dir,
+            filename_tmpl='iter_{}.pth'.format(runner.iter + 1),
+            save_optimizer=self.save_optimizer, **self.args)
